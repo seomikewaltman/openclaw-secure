@@ -1,0 +1,70 @@
+{
+  "name": "openclaw-secure",
+  "version": "1.0.0",
+  "description": "Hardware-gated secret management for AI agents. Secures Clawdbot API keys with pluggable backends (Keychain, 1Password, Bitwarden, and more).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "bin": {
+    "openclaw-secure": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "clawdbot",
+    "openclaw",
+    "security",
+    "secrets",
+    "keychain",
+    "1password",
+    "bitwarden",
+    "vault",
+    "api-keys",
+    "prompt-injection",
+    "ai-agent",
+    "secret-management"
+  ],
+  "author": "Michael Waltman",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/seomikewaltman/openclaw-secure"
+  },
+  "homepage": "https://github.com/seomikewaltman/openclaw-secure#readme",
+  "bugs": {
+    "url": "https://github.com/seomikewaltman/openclaw-secure/issues"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "peerDependencies": {
+    "clawdbot": ">=2026.1.0"
+  },
+  "peerDependenciesMeta": {
+    "clawdbot": {
+      "optional": false
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^25.1.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^2.0.0"
+  }
+}
