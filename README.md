@@ -19,7 +19,7 @@
 Your AI agent has tool access. It can run shell commands. It can read files. And your API keys are sitting in **plain text config files**.
 
 ```
-~/.clawdbot/clawdbot.json
+~/.openclaw/openclaw.json
 ├── channels.telegram.botToken: "7234891:AAF..."   ← any agent can cat this
 ├── gateway.auth.token: "sk-proj-..."               ← prompt injection = game over
 └── skills.entries.openai-whisper-api.apiKey: "sk-..." 
@@ -70,7 +70,7 @@ That's it. Your config file now has placeholders instead of real keys, and the g
 
 ## 🖥️ LaunchAgent Setup (macOS Boot Security)
 
-Clawdbot starts on boot via a macOS LaunchAgent. By default it reads keys from plain text config. Patch the LaunchAgent to go through openclaw-secure instead:
+OpenClaw starts on boot via a macOS LaunchAgent. By default it reads keys from plain text config. Patch the LaunchAgent to go through openclaw-secure instead:
 
 ```bash
 # One-time setup
@@ -85,9 +85,9 @@ openclaw-secure uninstall                # restore original LaunchAgent
 
 The `install` command:
 - Backs up your existing plist to `.bak`
-- Replaces `ProgramArguments` to run `openclaw-secure start` instead of `clawdbot gateway`
+- Replaces `ProgramArguments` to run `openclaw-secure start` instead of `openclaw gateway`
 - Reloads the LaunchAgent via `launchctl`
-- Preserves environment variables (like `CLAWDBOT_GATEWAY_PORT`)
+- Preserves environment variables (like `OPENCLAW_GATEWAY_PORT`)
 
 You can bake in a backend choice:
 ```bash
@@ -112,7 +112,7 @@ The `uninstall` command restores the original plist from the `.bak` backup and r
 
 ```bash
 --backend <name>        # Secret backend (default: keychain)
---config <path>         # Config file (default: ~/.clawdbot/clawdbot.json)
+--config <path>         # Config file (default: ~/.openclaw/openclaw.json)
 --timeout <ms>          # Gateway health timeout (default: 10000)
 --help, -h              # Show help
 ```
@@ -357,7 +357,7 @@ CLI flags always override preferences.
 
 ### Secret Map
 
-By default, openclaw-secure manages these Clawdbot config paths:
+By default, openclaw-secure manages these OpenClaw config paths:
 
 | Config Path | Backend Key |
 |---|---|
@@ -382,13 +382,13 @@ import {
 const backend = createBackend('1password', { vault: 'Private' });
 
 // Store keys from config into backend
-const results = await storeKeys('~/.clawdbot/clawdbot.json', DEFAULT_SECRET_MAP, backend);
+const results = await storeKeys('~/.openclaw/openclaw.json', DEFAULT_SECRET_MAP, backend);
 
 // Restore keys from backend to config
-await restoreKeys('~/.clawdbot/clawdbot.json', DEFAULT_SECRET_MAP, backend);
+await restoreKeys('~/.openclaw/openclaw.json', DEFAULT_SECRET_MAP, backend);
 
 // Scrub config (replace real values with placeholders)
-await scrubKeys('~/.clawdbot/clawdbot.json', DEFAULT_SECRET_MAP);
+await scrubKeys('~/.openclaw/openclaw.json', DEFAULT_SECRET_MAP);
 
 // Check all keys exist in backend
 const checks = await checkKeys(DEFAULT_SECRET_MAP, backend);

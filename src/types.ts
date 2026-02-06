@@ -1,6 +1,6 @@
 /** Maps a key name to a dot-path in the config JSON */
 export interface SecretEntry {
-  /** Dot-separated path into clawdbot.json (e.g. "channels.telegram.botToken") */
+  /** Dot-separated path into openclaw.json (e.g. "channels.telegram.botToken") */
   configPath: string;
   /** Short key identifier (e.g. "telegram-bot-token") */
   keychainName: string;

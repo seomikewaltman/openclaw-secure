@@ -32,7 +32,7 @@ describe('storeKeys', () => {
 
   beforeEach(async () => {
     tmpDir = await mkdtemp(join(tmpdir(), 'oc-store-'));
-    configPath = join(tmpDir, 'clawdbot.json');
+    configPath = join(tmpDir, 'openclaw.json');
   });
 
   afterEach(async () => {
@@ -107,7 +107,7 @@ describe('restoreKeys', () => {
 
   beforeEach(async () => {
     tmpDir = await mkdtemp(join(tmpdir(), 'oc-restore-'));
-    configPath = join(tmpDir, 'clawdbot.json');
+    configPath = join(tmpDir, 'openclaw.json');
   });
 
   afterEach(async () => {
@@ -159,7 +159,7 @@ describe('scrubKeys', () => {
 
   beforeEach(async () => {
     tmpDir = await mkdtemp(join(tmpdir(), 'oc-scrub-'));
-    configPath = join(tmpDir, 'clawdbot.json');
+    configPath = join(tmpDir, 'openclaw.json');
   });
 
   afterEach(async () => {

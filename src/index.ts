@@ -1,5 +1,5 @@
 /**
- * openclaw-secure — Secure Clawdbot API keys with a pluggable secret backend.
+ * openclaw-secure — Secure OpenClaw API keys with a pluggable secret backend.
  *
  * @packageDocumentation
  */
@@ -43,7 +43,7 @@ export type {
   StartOptions,
 } from './types.js';
 
-import type { SecretBackend } from './backends/index.js';
+import type { SecretBackend } from './backends';
 import { readConfig, writeConfig } from './config.js';
 import { getByPath, setByPath } from './paths.js';
 import { KEYCHAIN_PLACEHOLDER } from './constants.js';
