@@ -1,7 +1,7 @@
 {
   "name": "openclaw-secure",
   "version": "1.0.1",
-  "description": "Hardware-gated secret management for AI agents. Secures Clawdbot API keys with pluggable backends (Keychain, 1Password, Bitwarden, and more).",
+  "description": "Hardware-gated secret management for AI agents. Secures OpenClaw API keys with pluggable backends (Keychain, 1Password, Bitwarden, and more).",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -27,7 +27,6 @@
     "prepublishOnly": "npm run build"
   },
   "keywords": [
-    "clawdbot",
     "openclaw",
     "security",
     "secrets",
@@ -54,11 +53,11 @@
     "node": ">=22.0.0"
   },
   "peerDependencies": {
-    "clawdbot": ">=2026.1.0"
+    "openclaw": ">=2026.1.0"
   },
   "peerDependenciesMeta": {
-    "clawdbot": {
-      "optional": false
+    "openclaw": {
+      "optional": true
     }
   },
   "devDependencies": {

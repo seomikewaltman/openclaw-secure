@@ -1,7 +1,7 @@
 /**
  * LaunchAgent plist management for openclaw-secure.
  *
- * Patches the Clawdbot LaunchAgent to start via openclaw-secure,
+ * Patches the OpenClaw LaunchAgent to start via openclaw-secure,
  * ensuring secrets are injected at boot and scrubbed after startup.
  */
 
@@ -29,7 +29,7 @@ export interface InstallOptions {
 
 // ── Constants ──────────────────────────────────────────────────────────
 
-const PLIST_FILENAME = 'com.clawdbot.gateway.plist';
+const PLIST_FILENAME = 'com.openclaw.gateway.plist';
 const LAUNCHAGENTS_DIR = join(homedir(), 'Library', 'LaunchAgents');
 const PLIST_PATH = join(LAUNCHAGENTS_DIR, PLIST_FILENAME);
 
@@ -141,14 +141,14 @@ function buildPlistXml(config: PlistConfig): string {
 // ── Public API ─────────────────────────────────────────────────────────
 
 /**
- * Find the Clawdbot LaunchAgent plist file.
+ * Find the OpenClaw LaunchAgent plist file.
  * @returns Absolute path to the plist
  * @throws If the plist does not exist
  */
 export function findPlist(): string {
   if (!existsSync(PLIST_PATH)) {
     throw new Error(
-      'Clawdbot LaunchAgent not found. Is Clawdbot installed?\n' +
+      'OpenClaw LaunchAgent not found. Is OpenClaw installed?\n' +
       `  Expected: ${PLIST_PATH}`,
     );
   }
@@ -218,7 +218,7 @@ function reloadLaunchAgent(plistPath: string): void {
 }
 
 /**
- * Patch the Clawdbot LaunchAgent to start via openclaw-secure.
+ * Patch the OpenClaw LaunchAgent to start via openclaw-secure.
  */
 export function installSecure(options: InstallOptions = {}): {
   plistPath: string;
@@ -244,6 +244,7 @@ export function installSecure(options: InstallOptions = {}): {
   }
 
   // Update config
+  config.label = 'com.openclaw.gateway';
   config.programArguments = newArgs;
 
   // Write modified plist
@@ -259,7 +260,7 @@ export function installSecure(options: InstallOptions = {}): {
 }
 
 /**
- * Restore the original Clawdbot LaunchAgent from backup.
+ * Restore the original OpenClaw LaunchAgent from backup.
  */
 export function uninstallSecure(): {
   plistPath: string;
@@ -284,19 +285,24 @@ export function uninstallSecure(): {
   } else {
     // Reconstruct original args
     const nodePath = resolveNodeBinary();
-    let clawdbotPath: string;
+    let openclawPath: string;
+    let label = 'com.openclaw.gateway';
     try {
-      const clawdbotBin = execFileSync('/usr/bin/which', ['clawdbot'], { encoding: 'utf-8' }).trim();
-      // The actual entry point is usually the dist/entry.js resolved from the bin
-      clawdbotPath = clawdbotBin;
+      openclawPath = execFileSync('/usr/bin/which', ['openclaw'], { encoding: 'utf-8' }).trim();
     } catch {
-      throw new Error(
-        'Cannot find clawdbot binary and no backup exists.\n' +
-        '  Cannot reconstruct the original LaunchAgent.',
-      );
+      try {
+        openclawPath = execFileSync('/usr/bin/which', ['clawdbot'], { encoding: 'utf-8' }).trim();
+        label = 'com.clawdbot.gateway';
+      } catch {
+        throw new Error(
+          'Cannot find openclaw or clawdbot binary and no backup exists.\n' +
+          '  Cannot reconstruct the original LaunchAgent.',
+        );
+      }
     }
 
-    newArgs = [nodePath, clawdbotPath, 'gateway', 'start'];
+    newArgs = [nodePath, openclawPath, 'gateway', 'start'];
+    config.label = label;
     config.programArguments = newArgs;
     const xml = buildPlistXml(config);
     writeFileSync(plistPath, xml, 'utf-8');

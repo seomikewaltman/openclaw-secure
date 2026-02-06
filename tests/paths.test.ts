@@ -27,7 +27,7 @@ describe('getByPath', () => {
     expect(getByPath({ a: null } as Record<string, unknown>, 'a.b')).toBeUndefined();
   });
 
-  it('handles the actual clawdbot config paths', () => {
+  it('handles the actual openclaw config paths', () => {
     const config = {
       channels: { telegram: { botToken: 'tok123' } },
       gateway: { auth: { token: 'gw-tok' } },
