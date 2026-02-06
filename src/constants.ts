@@ -13,6 +13,7 @@ export const DEFAULT_SECRET_MAP: SecretMap = [
   { configPath: 'channels.telegram.botToken', keychainName: 'telegram-bot-token' },
   { configPath: 'gateway.auth.token', keychainName: 'gateway-auth-token' },
   { configPath: 'skills.entries.openai-whisper-api.apiKey', keychainName: 'whisper-api-key' },
+  { configPath: 'tools.web.search.apiKey', keychainName: 'brave-search-api-key' },
 ];
 
 export function serviceName(keychainName: string): string {

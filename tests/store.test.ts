@@ -26,6 +26,10 @@ const testSecretMap: SecretMap = [
   { configPath: 'gateway.auth.token', keychainName: 'gateway-auth-token' },
 ];
 
+const braveSearchSecretMap: SecretMap = [
+  { configPath: 'tools.web.search.apiKey', keychainName: 'brave-search-api-key' },
+];
+
 describe('storeKeys', () => {
   let tmpDir: string;
   let configPath: string;
@@ -217,5 +221,75 @@ describe('checkKeys', () => {
 
     const results = await checkKeys(testSecretMap, backend);
     expect(results.every((r) => r.exists)).toBe(true);
+  });
+});
+
+describe('Brave Search API key (issue #1)', () => {
+  let tmpDir: string;
+  let configPath: string;
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'oc-brave-'));
+    configPath = join(tmpDir, 'openclaw.json');
+  });
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true });
+  });
+
+  it('stores Brave Search API key and replaces with placeholder', async () => {
+    const config = {
+      tools: { web: { search: { enabled: true, apiKey: 'BSA1234567890abcdef' } } },
+    };
+    await writeFile(configPath, JSON.stringify(config, null, 2));
+
+    const backend = createMockBackend();
+    const results = await storeKeys(configPath, braveSearchSecretMap, backend);
+
+    expect(results).toHaveLength(1);
+    expect(results[0].stored).toBe(true);
+
+    const written = JSON.parse(await readFile(configPath, 'utf-8'));
+    expect(written.tools.web.search.apiKey).toBe(KEYCHAIN_PLACEHOLDER);
+    expect(await backend.get('brave-search-api-key')).toBe('BSA1234567890abcdef');
+  });
+
+  it('restores Brave Search API key from backend', async () => {
+    const config = {
+      tools: { web: { search: { enabled: true, apiKey: KEYCHAIN_PLACEHOLDER } } },
+    };
+    await writeFile(configPath, JSON.stringify(config, null, 2));
+
+    const backend = createMockBackend({
+      'brave-search-api-key': 'BSA1234567890abcdef',
+    });
+
+    await restoreKeys(configPath, braveSearchSecretMap, backend);
+
+    const written = JSON.parse(await readFile(configPath, 'utf-8'));
+    expect(written.tools.web.search.apiKey).toBe('BSA1234567890abcdef');
+  });
+
+  it('scrubs Brave Search API key from config', async () => {
+    const config = {
+      tools: { web: { search: { enabled: true, apiKey: 'BSA1234567890abcdef' } } },
+    };
+    await writeFile(configPath, JSON.stringify(config, null, 2));
+
+    await scrubKeys(configPath, braveSearchSecretMap);
+
+    const written = JSON.parse(await readFile(configPath, 'utf-8'));
+    expect(written.tools.web.search.apiKey).toBe(KEYCHAIN_PLACEHOLDER);
+  });
+
+  it('checks Brave Search API key exists in backend', async () => {
+    const backend = createMockBackend({
+      'brave-search-api-key': 'BSA1234567890abcdef',
+    });
+
+    const results = await checkKeys(braveSearchSecretMap, backend);
+    expect(results).toHaveLength(1);
+    expect(results[0].exists).toBe(true);
+    expect(results[0].keychainName).toBe('brave-search-api-key');
   });
 });
