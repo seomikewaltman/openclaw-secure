@@ -30,7 +30,7 @@ export class DopplerBackend extends CliBackend {
       return stdout.trim() || null;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      if (message.includes('could not find') || message.includes('not found')) return null;
+      if (message.includes('ould not find') || message.includes('not found')) return null;
       throw new Error(`Doppler get failed for "${key}": ${message}`);
     }
   }
@@ -51,7 +51,7 @@ export class DopplerBackend extends CliBackend {
       await runCommand('doppler', ['secrets', 'delete', dKey, '--yes', ...this.projectArgs()]);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      if (message.includes('could not find') || message.includes('not found')) return;
+      if (message.includes('ould not find') || message.includes('not found')) return;
       throw new Error(`Doppler delete failed for "${key}": ${message}`);
     }
   }
