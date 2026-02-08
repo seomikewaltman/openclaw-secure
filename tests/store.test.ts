@@ -30,6 +30,15 @@ const braveSearchSecretMap: SecretMap = [
   { configPath: 'tools.web.search.apiKey', keychainName: 'brave-search-api-key' },
 ];
 
+const slackSecretMap: SecretMap = [
+  { configPath: 'channels.slack.appToken', keychainName: 'slack-app-token' },
+  { configPath: 'channels.slack.botToken', keychainName: 'slack-bot-token' },
+];
+
+const sagSecretMap: SecretMap = [
+  { configPath: 'skills.entries.sag.apiKey', keychainName: 'sag-api-key' },
+];
+
 describe('storeKeys', () => {
   let tmpDir: string;
   let configPath: string;
@@ -291,5 +300,229 @@ describe('Brave Search API key (issue #1)', () => {
     expect(results).toHaveLength(1);
     expect(results[0].exists).toBe(true);
     expect(results[0].keychainName).toBe('brave-search-api-key');
+  });
+});
+
+describe('Slack channel secrets', () => {
+  let tmpDir: string;
+  let configPath: string;
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'oc-slack-'));
+    configPath = join(tmpDir, 'openclaw.json');
+  });
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true });
+  });
+
+  it('stores Slack app token and bot token and replaces with placeholders', async () => {
+    const config = {
+      channels: {
+        slack: {
+          appToken: 'test-slack-app-token-value',
+          botToken: 'test-slack-bot-token-value',
+        },
+      },
+    };
+    await writeFile(configPath, JSON.stringify(config, null, 2));
+
+    const backend = createMockBackend();
+    const results = await storeKeys(configPath, slackSecretMap, backend);
+
+    expect(results).toHaveLength(2);
+    expect(results[0].stored).toBe(true);
+    expect(results[1].stored).toBe(true);
+
+    const written = JSON.parse(await readFile(configPath, 'utf-8'));
+    expect(written.channels.slack.appToken).toBe(KEYCHAIN_PLACEHOLDER);
+    expect(written.channels.slack.botToken).toBe(KEYCHAIN_PLACEHOLDER);
+
+    expect(await backend.get('slack-app-token')).toBe('test-slack-app-token-value');
+    expect(await backend.get('slack-bot-token')).toBe('test-slack-bot-token-value');
+  });
+
+  it('restores Slack tokens from backend', async () => {
+    const config = {
+      channels: {
+        slack: {
+          appToken: KEYCHAIN_PLACEHOLDER,
+          botToken: KEYCHAIN_PLACEHOLDER,
+        },
+      },
+    };
+    await writeFile(configPath, JSON.stringify(config, null, 2));
+
+    const backend = createMockBackend({
+      'slack-app-token': 'xapp-restored-token',
+      'slack-bot-token': 'xoxb-restored-token',
+    });
+
+    await restoreKeys(configPath, slackSecretMap, backend);
+
+    const written = JSON.parse(await readFile(configPath, 'utf-8'));
+    expect(written.channels.slack.appToken).toBe('xapp-restored-token');
+    expect(written.channels.slack.botToken).toBe('xoxb-restored-token');
+  });
+
+  it('scrubs Slack tokens from config', async () => {
+    const config = {
+      channels: {
+        slack: {
+          appToken: 'xapp-secret-token',
+          botToken: 'xoxb-secret-token',
+        },
+      },
+    };
+    await writeFile(configPath, JSON.stringify(config, null, 2));
+
+    await scrubKeys(configPath, slackSecretMap);
+
+    const written = JSON.parse(await readFile(configPath, 'utf-8'));
+    expect(written.channels.slack.appToken).toBe(KEYCHAIN_PLACEHOLDER);
+    expect(written.channels.slack.botToken).toBe(KEYCHAIN_PLACEHOLDER);
+  });
+
+  it('checks Slack tokens exist in backend', async () => {
+    const backend = createMockBackend({
+      'slack-app-token': 'xapp-token',
+      'slack-bot-token': 'xoxb-token',
+    });
+
+    const results = await checkKeys(slackSecretMap, backend);
+    expect(results).toHaveLength(2);
+    expect(results.every((r) => r.exists)).toBe(true);
+  });
+
+  it('handles partial Slack config (only bot token)', async () => {
+    const config = {
+      channels: {
+        slack: {
+          botToken: 'test-only-bot-token',
+        },
+      },
+    };
+    await writeFile(configPath, JSON.stringify(config, null, 2));
+
+    const backend = createMockBackend();
+    const results = await storeKeys(configPath, slackSecretMap, backend);
+
+    expect(results[0].skipped).toBe(true);
+    expect(results[0].reason).toContain('not found');
+    expect(results[1].stored).toBe(true);
+
+    const written = JSON.parse(await readFile(configPath, 'utf-8'));
+    expect(written.channels.slack.botToken).toBe(KEYCHAIN_PLACEHOLDER);
+    expect(await backend.get('slack-bot-token')).toBe('test-only-bot-token');
+  });
+});
+
+describe('SAG (Skills API Gateway) secret', () => {
+  let tmpDir: string;
+  let configPath: string;
+
+  beforeEach(async () => {
+    tmpDir = await mkdtemp(join(tmpdir(), 'oc-sag-'));
+    configPath = join(tmpDir, 'openclaw.json');
+  });
+
+  afterEach(async () => {
+    await rm(tmpDir, { recursive: true, force: true });
+  });
+
+  it('stores SAG API key and replaces with placeholder', async () => {
+    const config = {
+      skills: {
+        entries: {
+          sag: {
+            apiKey: 'sag-secret-key-12345',
+            enabled: true,
+          },
+        },
+      },
+    };
+    await writeFile(configPath, JSON.stringify(config, null, 2));
+
+    const backend = createMockBackend();
+    const results = await storeKeys(configPath, sagSecretMap, backend);
+
+    expect(results).toHaveLength(1);
+    expect(results[0].stored).toBe(true);
+
+    const written = JSON.parse(await readFile(configPath, 'utf-8'));
+    expect(written.skills.entries.sag.apiKey).toBe(KEYCHAIN_PLACEHOLDER);
+    expect(await backend.get('sag-api-key')).toBe('sag-secret-key-12345');
+  });
+
+  it('restores SAG API key from backend', async () => {
+    const config = {
+      skills: {
+        entries: {
+          sag: {
+            apiKey: KEYCHAIN_PLACEHOLDER,
+            enabled: true,
+          },
+        },
+      },
+    };
+    await writeFile(configPath, JSON.stringify(config, null, 2));
+
+    const backend = createMockBackend({
+      'sag-api-key': 'sag-restored-key',
+    });
+
+    await restoreKeys(configPath, sagSecretMap, backend);
+
+    const written = JSON.parse(await readFile(configPath, 'utf-8'));
+    expect(written.skills.entries.sag.apiKey).toBe('sag-restored-key');
+  });
+
+  it('scrubs SAG API key from config', async () => {
+    const config = {
+      skills: {
+        entries: {
+          sag: {
+            apiKey: 'sag-secret-key',
+            enabled: true,
+          },
+        },
+      },
+    };
+    await writeFile(configPath, JSON.stringify(config, null, 2));
+
+    await scrubKeys(configPath, sagSecretMap);
+
+    const written = JSON.parse(await readFile(configPath, 'utf-8'));
+    expect(written.skills.entries.sag.apiKey).toBe(KEYCHAIN_PLACEHOLDER);
+  });
+
+  it('checks SAG API key exists in backend', async () => {
+    const backend = createMockBackend({
+      'sag-api-key': 'sag-key-value',
+    });
+
+    const results = await checkKeys(sagSecretMap, backend);
+    expect(results).toHaveLength(1);
+    expect(results[0].exists).toBe(true);
+    expect(results[0].keychainName).toBe('sag-api-key');
+  });
+
+  it('skips SAG when skills.entries.sag not configured', async () => {
+    const config = {
+      skills: {
+        entries: {
+          'openai-whisper-api': {
+            apiKey: 'whisper-key',
+          },
+        },
+      },
+    };
+    await writeFile(configPath, JSON.stringify(config, null, 2));
+
+    const backend = createMockBackend();
+    const results = await storeKeys(configPath, sagSecretMap, backend);
+
+    expect(results[0].skipped).toBe(true);
+    expect(results[0].reason).toContain('not found');
   });
 });
