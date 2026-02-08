@@ -10,9 +10,12 @@ export const DEFAULT_GATEWAY_COMMAND = 'openclaw gateway start';
 export const DEFAULT_BACKEND = 'keychain';
 
 export const DEFAULT_SECRET_MAP: SecretMap = [
+  { configPath: 'channels.slack.appToken', keychainName: 'slack-app-token' },
+  { configPath: 'channels.slack.botToken', keychainName: 'slack-bot-token' },
   { configPath: 'channels.telegram.botToken', keychainName: 'telegram-bot-token' },
   { configPath: 'gateway.auth.token', keychainName: 'gateway-auth-token' },
   { configPath: 'skills.entries.openai-whisper-api.apiKey', keychainName: 'whisper-api-key' },
+  { configPath: 'skills.entries.sag.apiKey', keychainName: 'sag-api-key' },
   { configPath: 'tools.web.search.apiKey', keychainName: 'brave-search-api-key' },
 ];
 
