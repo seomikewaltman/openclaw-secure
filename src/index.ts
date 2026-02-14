@@ -25,6 +25,28 @@ export type { Preferences } from './preferences.js';
 export { findPlist, readPlist, backupPlist, installSecure, uninstallSecure } from './launchagent.js';
 export type { PlistConfig, InstallOptions } from './launchagent.js';
 
+// Auto-discovery
+export {
+  discoverSecrets,
+  discoveredToSecretMap,
+  pathToKeychainName,
+} from './discovery.js';
+export type { DiscoveredSecret, DiscoveryOptions, MatchType } from './discovery.js';
+
+// Patterns
+export {
+  isKnownSecretPath,
+  isSecretKeyName,
+  matchesSecretValuePattern,
+  KNOWN_SECRET_PATHS,
+  KNOWN_SECRET_PATH_PATTERNS,
+  SECRET_KEY_EXACT,
+  SECRET_KEY_SUFFIXES,
+  SECRET_KEY_EXCLUDE,
+  SECRET_VALUE_PATTERNS,
+  MIN_SECRET_LENGTH,
+} from './patterns.js';
+
 // Constants
 export {
   KEYCHAIN_PLACEHOLDER,
@@ -32,6 +54,7 @@ export {
   DEFAULT_SECRET_MAP,
   DEFAULT_TIMEOUT_MS,
   DEFAULT_BACKEND,
+  LEGACY_KEY_NAMES,
 } from './constants.js';
 
 // Types
@@ -46,7 +69,10 @@ export type {
 import type { SecretBackend } from './backends';
 import { readConfig, writeConfig } from './config.js';
 import { getByPath, setByPath } from './paths.js';
-import { KEYCHAIN_PLACEHOLDER } from './constants.js';
+import { KEYCHAIN_PLACEHOLDER, LEGACY_KEY_NAMES } from './constants.js';
+import { pathToKeychainName } from './discovery.js';
+import { discoverSecrets, discoveredToSecretMap } from './discovery.js';
+import type { DiscoveryOptions } from './discovery.js';
 import type { SecretMap, KeyCheckResult, StoreResult } from './types.js';
 
 /**
@@ -115,5 +141,141 @@ export async function checkKeys(secretMap: SecretMap, backend: SecretBackend): P
     const value = await backend.get(entry.keychainName);
     results.push({ keychainName: entry.keychainName, configPath: entry.configPath, exists: value !== null });
   }
+  return results;
+}
+
+/**
+ * Auto-discover secrets in the config and store them in the backend.
+ * This is the preferred method for dynamic configs.
+ */
+export async function autoStoreKeys(
+  configPath: string,
+  backend: SecretBackend,
+  options?: DiscoveryOptions,
+): Promise<StoreResult[]> {
+  const config = await readConfig(configPath);
+  const discovered = discoverSecrets(config, options);
+  const secretMap = discoveredToSecretMap(discovered);
+  return storeKeys(configPath, secretMap, backend);
+}
+
+/**
+ * Auto-discover secrets in the config and check if they exist in the backend.
+ */
+export async function autoCheckKeys(
+  configPath: string,
+  backend: SecretBackend,
+  options?: DiscoveryOptions,
+): Promise<KeyCheckResult[]> {
+  const config = await readConfig(configPath);
+  const discovered = discoverSecrets(config, options);
+  const secretMap = discoveredToSecretMap(discovered);
+  return checkKeys(secretMap, backend);
+}
+
+/**
+ * Auto-discover secrets in the config and restore them from the backend.
+ */
+export async function autoRestoreKeys(
+  configPath: string,
+  backend: SecretBackend,
+  options?: DiscoveryOptions,
+): Promise<void> {
+  const config = await readConfig(configPath);
+  const discovered = discoverSecrets(config, options);
+  const secretMap = discoveredToSecretMap(discovered);
+  return restoreKeys(configPath, secretMap, backend);
+}
+
+/**
+ * Auto-discover secrets in the config and scrub them (replace with placeholders).
+ */
+export async function autoScrubKeys(
+  configPath: string,
+  options?: DiscoveryOptions,
+): Promise<void> {
+  const config = await readConfig(configPath);
+  const discovered = discoverSecrets(config, options);
+  const secretMap = discoveredToSecretMap(discovered);
+  return scrubKeys(configPath, secretMap);
+}
+
+/** Result of migrating a single key */
+export interface MigrateResult {
+  configPath: string;
+  oldName: string;
+  newName: string;
+  migrated: boolean;
+  reason?: string;
+}
+
+/**
+ * Migrate secrets from legacy v1.x keychain names to new auto-generated names.
+ * 
+ * For each legacy mapping:
+ * 1. Read the secret from the old keychain name
+ * 2. Write it to the new keychain name
+ * 3. Delete the old keychain entry
+ */
+export async function migrateKeys(backend: SecretBackend): Promise<MigrateResult[]> {
+  const results: MigrateResult[] = [];
+
+  for (const [configPath, oldName] of Object.entries(LEGACY_KEY_NAMES)) {
+    const newName = pathToKeychainName(configPath);
+
+    // Skip if names are the same (shouldn't happen, but safety check)
+    if (oldName === newName) {
+      results.push({
+        configPath,
+        oldName,
+        newName,
+        migrated: false,
+        reason: 'Names are identical',
+      });
+      continue;
+    }
+
+    // Try to read from old name
+    const value = await backend.get(oldName);
+    if (value === null) {
+      results.push({
+        configPath,
+        oldName,
+        newName,
+        migrated: false,
+        reason: 'No value found at old name',
+      });
+      continue;
+    }
+
+    // Check if new name already exists
+    const existingNew = await backend.get(newName);
+    if (existingNew !== null) {
+      // Delete old one since new one exists
+      await backend.delete(oldName);
+      results.push({
+        configPath,
+        oldName,
+        newName,
+        migrated: true,
+        reason: 'Deleted old (new already existed)',
+      });
+      continue;
+    }
+
+    // Write to new name
+    await backend.set(newName, value);
+
+    // Delete old name
+    await backend.delete(oldName);
+
+    results.push({
+      configPath,
+      oldName,
+      newName,
+      migrated: true,
+    });
+  }
+
   return results;
 }
