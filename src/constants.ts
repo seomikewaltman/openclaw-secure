@@ -22,3 +22,12 @@ export const DEFAULT_SECRET_MAP: SecretMap = [
 export function serviceName(keychainName: string): string {
   return `${SERVICE_PREFIX}-${keychainName}`;
 }
+
+/**
+ * Legacy keychain names from v1.x that differ from auto-generated names.
+ * Used by the migrate command to find and move old secrets.
+ */
+export const LEGACY_KEY_NAMES: Record<string, string> = {
+  'skills.entries.openai-whisper-api.apiKey': 'whisper-api-key',
+  'tools.web.search.apiKey': 'brave-search-api-key',
+};
